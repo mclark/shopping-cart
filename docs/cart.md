@@ -86,4 +86,3 @@ Required are **bold**
 | ---- | ---------------------------------- |
 | 1000 | The product could not be found.    |
 | 1001 | A product must be specified.       |
-| 1002 | An invalid quantity was specified. |
