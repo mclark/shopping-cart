@@ -28,19 +28,26 @@ single sign on using Facebook or Google or others, or just plain old email/passw
 However the account is created, the end result is the generation of two secrets, a
 *secret key* and a *secret id*. Both are randomly generated and given to the client
 as a response to the initial signup process. Both are also stored on the server in a
-secure database table.
+secure database table. The id in this case is essentially just a user id.
 
-When a request is made, the url and body are then used as the data to create a hashed
-value which, when combined with the *secret id*, creates a *signature* for the request.
-This provides assurance that the client is authentic and that the request was not tampered
-with in transit.
+When a request is made, the url, body, and current timestamp are then hashed using the
+*secret key* to create a digest value. This value, when combined with the *secret id*,
+creates a *signature* for the request. This provides assurance that the client is both
+authentic and that the request was not tampered with in transit.
 
 The signature is then specified in the `Authorization` header of the request in the format.
 In this example, we have used the SHA256 hash algorithm, but the server can choose to
 support whatever algorithm is preferred.
 
 ```
-Authorization: CART-HMAC-SHA256 Client=<SECRET_ID>,Signature=<SIGNATURE>
+url = "https://api.example.com/v1/products.json"
+params = ""
+data = url + params + Time.now.to_i.to_s
+digest = base64encode(hmac('SHA256', secret_key, data))
+```
+
+```
+Authorization: CART-HMAC-SHA256 Client=<SECRET_ID>,Signature=<digest>
 ```
 
 If the client were to reset their key (indirectly via password reset, or directly via
@@ -52,13 +59,11 @@ old key would be unauthenticated.
 ##### Secret Keys
 
 When the server receives a signed request, the account record is first looked up using the
-*secret id*. Next, the *secret key* is used to hash the url and body of the request to ensure
+*secret id*. Next, the *secret key* is used to hash the url, body, and datetime of the request to ensure
 the hashed value matches that provided by the client.
 
-Storing all the keys in plaintext in the database is a security risk, so encrypting them
-with a symmetric cipher and storing the key to that in another location would be a good
-practice. Performance issues could be mitigated using memory caching. That's more an
-implementation consideration.
+Storing all the keys in plaintext in the database is a security risk that may need to be accounted for.
+The next section addresses this flaw.
 
 #### Session authentication
 
@@ -66,7 +71,8 @@ While not RESTful, session based token authentication could augment the above se
 Instead of using long lived secrets and ids, the client could `POST` to a sessions
 resource endpoint, receive a time boxed key and id, and use them for all requests moving forward.
 These would then function as above, the difference being that they will eventually time out
-and become invalid. These could then be stored in a timed cache server side.
+and become invalid. These could then be stored in a timed cache server side. This approximates how
+oauth tokens work for RESTful APIs, which is very out of scope for this document.
 
 ### Error Response Codes
 
@@ -117,8 +123,13 @@ The response content type for this application is `application/json`. Other type
 be added in the future. Request bodies can be written in `application/json` or
 `application/x-www-form-urlencoded`.
 
+### Specially Required HTTP headers
+
+* `Authorization` - as described above. 401 returned without this.
+* `Date` - eg: `Sun, 06 Nov 1994 08:49:37 GMT`. This is used as part of the signature to prevent false attacks.
+
 ### Resources
 
-* [Products](/docs/products.md)
-* [Cart](/docs/cart.md)
-* [Orders](/docs/orders.md)
+* [Products](/docs/products.md) - the products available for purchase.
+* [Cart](/docs/cart.md) - a singleton resource scoped to the current user (but shared across all sessions).
+* [Orders](/docs/orders.md) - all orders, implicitly scoped to those belonging to the current user.
