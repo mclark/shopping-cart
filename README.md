@@ -74,6 +74,13 @@ These would then function as above, the difference being that they will eventual
 and become invalid. These could then be stored in a timed cache server side. This approximates how
 oauth tokens work for RESTful APIs, which is very out of scope for this document.
 
+#### It all depends
+
+Security in REST is a difficult subject and there is no true "silver bullet". This is a topic that
+really needs to be debated and the "right" solution always changes depending on the needs of the
+application being developed. Another form of authentication I haven't even touched on is token
+based which is possibly the most common of all, in my own experience.
+
 ### Error Response Codes
 
 This is a list of response codes expected to be handled by the application code itself. All HTTP
